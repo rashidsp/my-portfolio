@@ -1,0 +1,1 @@
+export { default as PROFILE_DATA } from './data/profile';
