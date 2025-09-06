@@ -40,7 +40,7 @@ export const generatePdf = async () => {
     finalCanvasHeight = finalCanvasWidth / canvasAspectRatio;
 
     pdf.addImage(imgData, 'PNG', 0, 0, finalCanvasWidth, finalCanvasHeight);
-    pdf.save('Rashid_Siddique_Resume.pdf');
+    pdf.save('resume.pdf');
 
   } catch (error) {
     console.error('Error generating PDF:', error);

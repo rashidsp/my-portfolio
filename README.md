@@ -1,4 +1,4 @@
-### Rashid Siddique — Portfolio Webapp
+### Portfolio Webapp
 
 Modern, open-source portfolio with AI chat (Gemini), dynamic profile data, and a 3D showcase built with React + Vite + TypeScript.
 

@@ -3,6 +3,33 @@ import { loadProfileData } from '../services/profileData';
 import { streamAIResponse } from '../services/geminiService';
 import { SendIcon, UserIcon, SparkleIcon } from './icons/Icons';
 
+// Generate a simple browser fingerprint for user identification
+const generateUserFingerprint = (): string => {
+  const canvas = document.createElement('canvas');
+  const ctx = canvas.getContext('2d');
+  ctx?.fillText('Browser fingerprint', 2, 2);
+  
+  const fingerprint = [
+    navigator.userAgent,
+    navigator.language,
+    screen.width + 'x' + screen.height,
+    new Date().getTimezoneOffset(),
+    canvas.toDataURL()
+  ].join('|');
+  
+  // Simple hash function
+  let hash = 0;
+  for (let i = 0; i < fingerprint.length; i++) {
+    const char = fingerprint.charCodeAt(i);
+    hash = ((hash << 5) - hash) + char;
+    hash = hash & hash; // Convert to 32-bit integer
+  }
+  return Math.abs(hash).toString(36);
+};
+
+const STORAGE_KEY = 'ai_chat_user_status';
+const MAX_USER_MESSAGES = 5;
+
 interface Message {
   sender: 'user' | 'model';
   text: string;
@@ -60,6 +87,13 @@ const formatMessageContent = (text: string) => {
     );
 };
 
+interface UserStatus {
+  fingerprint: string;
+  messageCount: number;
+  isBanned: boolean;
+  lastActivity: number;
+}
+
 export const AIChat: React.FC = () => {
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState('');
@@ -67,8 +101,81 @@ export const AIChat: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   const chatContainerRef = useRef<HTMLDivElement>(null);
   const [exampleQuestions, setExampleQuestions] = useState<string[]>(DEFAULT_EXAMPLE_QUESTIONS);
+  const [userMessageCount, setUserMessageCount] = useState(0);
+  const [isUserBanned, setIsUserBanned] = useState(false);
+  const [userFingerprint, setUserFingerprint] = useState<string>('');
+
+  // User status management functions
+  const getUserStatus = (): UserStatus | null => {
+    try {
+      const stored = localStorage.getItem(STORAGE_KEY);
+      return stored ? JSON.parse(stored) : null;
+    } catch {
+      return null;
+    }
+  };
+
+  const saveUserStatus = (status: UserStatus) => {
+    try {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(status));
+    } catch {
+      // Handle localStorage errors silently
+    }
+  };
+
+  const checkUserBanStatus = () => {
+    const fingerprint = generateUserFingerprint();
+    setUserFingerprint(fingerprint);
+    
+    const userStatus = getUserStatus();
+    
+    if (userStatus && userStatus.fingerprint === fingerprint) {
+      if (userStatus.isBanned) {
+        setIsUserBanned(true);
+        setUserMessageCount(userStatus.messageCount);
+        return true; // User is banned
+      } else {
+        setUserMessageCount(userStatus.messageCount);
+        return false; // User exists but not banned
+      }
+    }
+    
+    // New user or no stored data
+    setUserMessageCount(0);
+    setIsUserBanned(false);
+    return false;
+  };
+
+  const banUser = () => {
+    const status: UserStatus = {
+      fingerprint: userFingerprint,
+      messageCount: userMessageCount,
+      isBanned: true,
+      lastActivity: Date.now()
+    };
+    saveUserStatus(status);
+    setIsUserBanned(true);
+  };
+
+  const updateUserMessageCount = (count: number) => {
+    setUserMessageCount(count);
+    const status: UserStatus = {
+      fingerprint: userFingerprint,
+      messageCount: count,
+      isBanned: count >= MAX_USER_MESSAGES,
+      lastActivity: Date.now()
+    };
+    saveUserStatus(status);
+    
+    if (count >= MAX_USER_MESSAGES) {
+      banUser();
+    }
+  };
 
   useEffect(() => {
+    // Check user ban status first
+    const isBanned = checkUserBanStatus();
+    
     (async () => {
       try {
         const data = await loadProfileData();
@@ -76,13 +183,23 @@ export const AIChat: React.FC = () => {
           setExampleQuestions(data.exampleQuestions.slice(0, 6));
         }
         const fullName = [data.firstName, data.lastName].filter(Boolean).join(' ');
-        const greeting = `Hello! I'm an AI assistant. Feel free to ask me anything about ${fullName}'s professional profile.`;
+        
+        let greeting: string;
+        if (isBanned) {
+          greeting = `Thanks for your interest! You've reached the current message limit, but we're upgrading the token capacity soon for unlimited conversations. Feel free to explore the rest of my portfolio!`;
+        } else {
+          greeting = `Hello! I'm an AI assistant. Feel free to ask me anything about ${fullName}'s professional profile.`;
+        }
+        
         if (messages.length === 0) {
           setMessages([{ sender: 'model', text: greeting }]);
         }
       } catch (e) {
         if (messages.length === 0) {
-          setMessages([{ sender: 'model', text: "Hello! I'm an AI assistant. Ask me anything about this professional profile." }]);
+          const greeting = isBanned 
+            ? `Thanks for your interest! You've reached the current message limit, but we're upgrading the token capacity soon for unlimited conversations. Feel free to explore the rest of my portfolio!`
+            : "Hello! I'm an AI assistant. Ask me anything about this professional profile.";
+          setMessages([{ sender: 'model', text: greeting }]);
         }
       }
     })();
@@ -93,10 +210,11 @@ export const AIChat: React.FC = () => {
   }, [messages, isLoading]);
 
   const sendMessage = async (messageText: string) => {
-    if (!messageText.trim() || isLoading) return;
+    if (!messageText.trim() || isLoading || isUserBanned || userMessageCount >= MAX_USER_MESSAGES) return;
 
     const userMessage: Message = { sender: 'user', text: messageText };
     setMessages(prev => [...prev, userMessage]);
+    updateUserMessageCount(userMessageCount + 1);
     setIsLoading(true);
     setError(null);
     
@@ -141,7 +259,7 @@ export const AIChat: React.FC = () => {
   };
 
   const handleQuestionClick = async (question: string) => {
-    if (isLoading) return;
+    if (isLoading || isUserBanned || userMessageCount >= MAX_USER_MESSAGES) return;
     setInput('');
     await sendMessage(question);
   };
@@ -185,23 +303,48 @@ export const AIChat: React.FC = () => {
                   <button
                       key={i}
                       onClick={() => handleQuestionClick(q)}
-                      disabled={isLoading}
+                      disabled={isLoading || isUserBanned || userMessageCount >= MAX_USER_MESSAGES}
                       className="px-4 py-2 text-xs font-mono rounded-full bg-gray-700/30 text-gray-300 border border-gray-600 hover:bg-blue-500/20 hover:border-blue-500/50 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
                   >
                       {q}
                   </button>
               ))}
             </div>
+            {isUserBanned ? (
+              <div className="text-center mb-4 p-4 bg-blue-500/10 border border-blue-500/30 rounded-lg">
+                <p className="text-blue-400 text-sm font-medium">
+                  💬 Thanks for chatting!
+                </p>
+                <p className="text-blue-300 text-xs mt-1">
+                  You've reached the current message limit. We're upgrading the token capacity soon - stay tuned for unlimited conversations!
+                </p>
+              </div>
+            ) : userMessageCount >= MAX_USER_MESSAGES ? (
+              <div className="text-center mb-4 p-3 bg-yellow-500/10 border border-yellow-500/30 rounded-lg">
+                <p className="text-yellow-400 text-sm">
+                  You've reached the current limit of {MAX_USER_MESSAGES} messages. Token capacity upgrade coming soon!
+                </p>
+              </div>
+            ) : (
+              <div className="text-center mb-4">
+                <p className="text-gray-400 text-xs">
+                  Messages remaining: {MAX_USER_MESSAGES - userMessageCount}
+                </p>
+                <p className="text-gray-500 text-xs mt-1">
+                  Token capacity upgrade coming soon!
+                </p>
+              </div>
+            )}
             <form onSubmit={handleSubmit} className="flex items-center space-x-3">
               <input
                 type="text"
                 value={input}
                 onChange={(e) => setInput(e.target.value)}
-                placeholder="Ask about my skills, projects, experience..."
+                placeholder={isUserBanned ? "Token upgrade coming soon! Explore the portfolio below" : userMessageCount >= MAX_USER_MESSAGES ? "Current limit reached - upgrade coming soon!" : "Ask about my skills, projects, experience..."}
                 className="flex-1 w-full px-5 py-3 bg-gray-900/50 text-white border-2 border-gray-600 rounded-full focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all"
-                disabled={isLoading}
+                disabled={isLoading || isUserBanned || userMessageCount >= MAX_USER_MESSAGES}
               />
-              <button type="submit" disabled={isLoading || !input.trim()} className="p-3 rounded-full bg-gradient-to-r from-blue-500 to-purple-500 text-white disabled:opacity-50 disabled:cursor-not-allowed transform hover:scale-110 transition-transform duration-200">
+              <button type="submit" disabled={isLoading || !input.trim() || isUserBanned || userMessageCount >= MAX_USER_MESSAGES} className="p-3 rounded-full bg-gradient-to-r from-blue-500 to-purple-500 text-white disabled:opacity-50 disabled:cursor-not-allowed transform hover:scale-110 transition-transform duration-200">
                 <SendIcon />
               </button>
             </form>

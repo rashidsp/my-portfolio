@@ -178,7 +178,7 @@ export const Portfolio: React.FC = () => {
 
 
     return (
-        <main className="ml-0 lg:ml-20">
+        <main className="pt-16 lg:pt-0 lg:ml-20">
             {/* Hero Section */}
             <section id="home" className="min-h-screen flex items-center justify-center relative overflow-hidden">
                  <div className="matrix-bg" id="matrixBg"></div>

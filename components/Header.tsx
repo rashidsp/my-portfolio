@@ -2,12 +2,15 @@ import React, { useState, useEffect } from 'react';
 
 export const Header: React.FC = () => {
     const [activeSection, setActiveSection] = useState('home');
+    const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
     const handleLinkClick = (e: React.MouseEvent<HTMLAnchorElement>, sectionId: string) => {
         e.preventDefault();
         const section = document.getElementById(sectionId);
         if (section) {
             section.scrollIntoView({ behavior: 'smooth' });
+            // Close mobile menu after navigation
+            setIsMobileMenuOpen(false);
         }
     };
 
@@ -44,88 +47,122 @@ export const Header: React.FC = () => {
         return () => window.removeEventListener('scroll', handleScroll);
     }, []);
 
+    const navigationItems = [
+        { id: 'home', icon: '🏠', label: 'Home', file: 'index.html', color: 'blue' },
+        { id: 'about', icon: '👨‍💻', label: 'About', file: 'profile.js', color: 'green' },
+        { id: 'experience', icon: '📈', label: 'Experience', file: 'career.json', color: 'purple' },
+        { id: 'projects', icon: '🚀', label: 'Projects', file: 'portfolio.tsx', color: 'yellow' },
+        { id: 'ai-chat', icon: '🤖', label: 'AI Chat', file: 'gemini.api', color: 'red' },
+        { id: 'three-d', icon: '🧊', label: '3D View', file: 'scene.js', color: 'cyan' },
+        { id: 'contact', icon: '📧', label: 'Contact', file: 'connect.api', color: 'pink' }
+    ];
+
     return (
-        <nav className="fixed left-4 top-1/2 transform -translate-y-1/2 z-50 w-20 hover:w-64 transition-all duration-300" id="sidebar" aria-label="Section navigation">
-            <div className="glass-morphism rounded-2xl p-4 mb-6 text-center">
-                <div className="text-xl font-bold font-mono mb-2">
-                    <span className="text-blue-400">&lt;</span>
-                    <span className="text-white">RS</span>
-                    <span className="text-blue-400">/&gt;</span>
+        <>
+            {/* Mobile Top Navigation */}
+            <nav className="lg:hidden fixed top-0 left-0 right-0 z-50 bg-black/90 backdrop-blur-md border-b border-gray-800 shadow-lg">
+                <div className="flex items-center justify-between px-4 py-3">
+                    {/* Logo */}
+                    <div className="flex items-center space-x-2">
+                        <div className="text-lg font-bold font-mono">
+                            <span className="text-blue-400">&lt;</span>
+                            <span className="text-white">RS</span>
+                            <span className="text-blue-400">/&gt;</span>
+                        </div>
+                        <div className="text-xs text-gray-400 font-mono">v2.0.1</div>
+                    </div>
+                    
+                    {/* Mobile Menu Button */}
+                    <button
+                        onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
+                        className="p-2 rounded-lg bg-gray-800/50 hover:bg-gray-700/50 transition-colors"
+                        aria-label="Toggle navigation menu"
+                    >
+                        <div className="w-6 h-6 flex flex-col justify-center space-y-1">
+                            <div className={`h-0.5 bg-white transition-all duration-300 ${isMobileMenuOpen ? 'rotate-45 translate-y-1.5' : ''}`}></div>
+                            <div className={`h-0.5 bg-white transition-all duration-300 ${isMobileMenuOpen ? 'opacity-0' : ''}`}></div>
+                            <div className={`h-0.5 bg-white transition-all duration-300 ${isMobileMenuOpen ? '-rotate-45 -translate-y-1.5' : ''}`}></div>
+                        </div>
+                    </button>
                 </div>
-                <div className="text-xs text-gray-400 font-mono">v2.0.1</div>
-            </div>
-            <div className="glass-morphism rounded-2xl p-4 space-y-4">
-                <a href="#home" aria-current={activeSection === 'home' ? 'page' : undefined} onClick={(e) => handleLinkClick(e, 'home')} className={`nav-link group flex items-center space-x-3 p-3 rounded-xl transition-all duration-300 hover:bg-blue-500/20 ${activeSection === 'home' ? 'active' : ''}`}>
-                    <div className="w-8 h-8 flex items-center justify-center bg-blue-500/20 rounded-lg group-hover:bg-blue-500/40 transition-colors">
-                        <span className="text-blue-400 text-sm">🏠</span>
+                
+                {/* Mobile Menu Dropdown */}
+                <div className={`overflow-hidden transition-all duration-300 ${isMobileMenuOpen ? 'max-h-screen opacity-100' : 'max-h-0 opacity-0'}`}>
+                    <div className="px-4 pb-6 space-y-3 max-h-[80vh] overflow-y-auto scrollbar-thin scrollbar-thumb-gray-600 scrollbar-track-gray-800">
+                        {navigationItems.map((item) => (
+                            <a
+                                key={item.id}
+                                href={`#${item.id}`}
+                                aria-current={activeSection === item.id ? 'page' : undefined}
+                                onClick={(e) => handleLinkClick(e, item.id)}
+                                className={`flex items-center space-x-3 p-4 rounded-xl transition-all duration-300 hover:bg-${item.color}-500/20 ${
+                                    activeSection === item.id ? `bg-${item.color}-500/20 border border-${item.color}-500/30` : ''
+                                }`}
+                            >
+                                <div className={`w-8 h-8 flex items-center justify-center bg-${item.color}-500/20 rounded-lg`}>
+                                    <span className={`text-${item.color}-400 text-sm`}>{item.icon}</span>
+                                </div>
+                                <div>
+                                    <div className="text-white text-sm font-medium">{item.label}</div>
+                                    <div className="text-gray-400 text-xs font-mono">{item.file}</div>
+                                </div>
+                            </a>
+                        ))}
+                        
+                        {/* Status Indicator */}
+                        <div className="mt-6 p-4 rounded-xl bg-gray-800/50 text-center">
+                            <div className="flex items-center justify-center space-x-2 mb-1">
+                                <div className="w-2 h-2 bg-green-400 rounded-full animate-pulse"></div>
+                                <span className="text-green-400 text-xs font-mono">ONLINE</span>
+                            </div>
+                            <div className="text-gray-400 text-xs font-mono">Status: 200 OK</div>
+                        </div>
+                        
+                        {/* Scroll Indicator */}
+                        <div className="flex justify-center mt-4 pb-2">
+                            <div className="w-8 h-1 bg-gray-600 rounded-full opacity-50"></div>
+                        </div>
                     </div>
-                    <div className="hidden group-hover:block whitespace-nowrap">
-                        <div className="text-white text-sm font-medium">Home</div>
-                        <div className="text-gray-400 text-xs font-mono">index.html</div>
-                    </div>
-                </a>
-                <a href="#about" aria-current={activeSection === 'about' ? 'page' : undefined} onClick={(e) => handleLinkClick(e, 'about')} className={`nav-link group flex items-center space-x-3 p-3 rounded-xl transition-all duration-300 hover:bg-green-500/20 ${activeSection === 'about' ? 'active' : ''}`}>
-                    <div className="w-8 h-8 flex items-center justify-center bg-green-500/20 rounded-lg group-hover:bg-green-500/40 transition-colors">
-                        <span className="text-green-400 text-sm">👨‍💻</span>
-                    </div>
-                    <div className="hidden group-hover:block whitespace-nowrap">
-                        <div className="text-white text-sm font-medium">About</div>
-                        <div className="text-gray-400 text-xs font-mono">profile.js</div>
-                    </div>
-                </a>
-                <a href="#experience" aria-current={activeSection === 'experience' ? 'page' : undefined} onClick={(e) => handleLinkClick(e, 'experience')} className={`nav-link group flex items-center space-x-3 p-3 rounded-xl transition-all duration-300 hover:bg-purple-500/20 ${activeSection === 'experience' ? 'active' : ''}`}>
-                    <div className="w-8 h-8 flex items-center justify-center bg-purple-500/20 rounded-lg group-hover:bg-purple-500/40 transition-colors">
-                        <span className="text-purple-400 text-sm">📈</span>
-                    </div>
-                    <div className="hidden group-hover:block whitespace-nowrap">
-                        <div className="text-white text-sm font-medium">Experience</div>
-                        <div className="text-gray-400 text-xs font-mono">career.json</div>
-                    </div>
-                </a>
-                <a href="#projects" aria-current={activeSection === 'projects' ? 'page' : undefined} onClick={(e) => handleLinkClick(e, 'projects')} className={`nav-link group flex items-center space-x-3 p-3 rounded-xl transition-all duration-300 hover:bg-yellow-500/20 ${activeSection === 'projects' ? 'active' : ''}`}>
-                    <div className="w-8 h-8 flex items-center justify-center bg-yellow-500/20 rounded-lg group-hover:bg-yellow-500/40 transition-colors">
-                        <span className="text-yellow-400 text-sm">🚀</span>
-                    </div>
-                    <div className="hidden group-hover:block whitespace-nowrap">
-                        <div className="text-white text-sm font-medium">Projects</div>
-                        <div className="text-gray-400 text-xs font-mono">portfolio.tsx</div>
-                    </div>
-                </a>
-                <a href="#ai-chat" aria-current={activeSection === 'ai-chat' ? 'page' : undefined} onClick={(e) => handleLinkClick(e, 'ai-chat')} className={`nav-link group flex items-center space-x-3 p-3 rounded-xl transition-all duration-300 hover:bg-red-500/20 ${activeSection === 'ai-chat' ? 'active' : ''}`}>
-                    <div className="w-8 h-8 flex items-center justify-center bg-red-500/20 rounded-lg group-hover:bg-red-500/40 transition-colors">
-                        <span className="text-red-400 text-sm">🤖</span>
-                    </div>
-                    <div className="hidden group-hover:block whitespace-nowrap">
-                        <div className="text-white text-sm font-medium">AI Chat</div>
-                        <div className="text-gray-400 text-xs font-mono">gemini.api</div>
-                    </div>
-                </a>
-                <a href="#three-d" aria-current={activeSection === 'three-d' ? 'page' : undefined} onClick={(e) => handleLinkClick(e, 'three-d')} className={`nav-link group flex items-center space-x-3 p-3 rounded-xl transition-all duration-300 hover:bg-cyan-500/20 ${activeSection === 'three-d' ? 'active' : ''}`}>
-                    <div className="w-8 h-8 flex items-center justify-center bg-cyan-500/20 rounded-lg group-hover:bg-cyan-500/40 transition-colors">
-                        <span className="text-cyan-400 text-sm">🧊</span>
-                    </div>
-                    <div className="hidden group-hover:block whitespace-nowrap">
-                        <div className="text-white text-sm font-medium">3D View</div>
-                        <div className="text-gray-400 text-xs font-mono">scene.js</div>
-                    </div>
-                </a>
-                <a href="#contact" aria-current={activeSection === 'contact' ? 'page' : undefined} onClick={(e) => handleLinkClick(e, 'contact')} className={`nav-link group flex items-center space-x-3 p-3 rounded-xl transition-all duration-300 hover:bg-pink-500/20 ${activeSection === 'contact' ? 'active' : ''}`}>
-                    <div className="w-8 h-8 flex items-center justify-center bg-pink-500/20 rounded-lg group-hover:bg-pink-500/40 transition-colors">
-                        <span className="text-pink-400 text-sm">📧</span>
-                    </div>
-                    <div className="hidden group-hover:block whitespace-nowrap">
-                        <div className="text-white text-sm font-medium">Contact</div>
-                        <div className="text-gray-400 text-xs font-mono">connect.api</div>
-                    </div>
-                </a>
-            </div>
-            <div className="glass-morphism rounded-2xl p-4 mt-6 text-center">
-                <div className="flex items-center justify-center space-x-2 mb-2">
-                    <div className="w-2 h-2 bg-green-400 rounded-full animate-pulse"></div>
-                    <span className="text-green-400 text-xs font-mono">ONLINE</span>
                 </div>
-                <div className="text-gray-400 text-xs font-mono">Status: 200 OK</div>
-            </div>
-        </nav>
+            </nav>
+
+            {/* Desktop Sidebar Navigation */}
+            <nav className="hidden lg:block fixed left-4 top-1/2 transform -translate-y-1/2 z-50 w-20 hover:w-64 transition-all duration-300" id="sidebar" aria-label="Section navigation">
+                <div className="glass-morphism rounded-2xl p-4 mb-6 text-center">
+                    <div className="text-xl font-bold font-mono mb-2">
+                        <span className="text-blue-400">&lt;</span>
+                        <span className="text-white">RS</span>
+                        <span className="text-blue-400">/&gt;</span>
+                    </div>
+                    <div className="text-xs text-gray-400 font-mono">v2.0.1</div>
+                </div>
+                <div className="glass-morphism rounded-2xl p-4 space-y-4">
+                    {navigationItems.map((item) => (
+                        <a
+                            key={item.id}
+                            href={`#${item.id}`}
+                            aria-current={activeSection === item.id ? 'page' : undefined}
+                            onClick={(e) => handleLinkClick(e, item.id)}
+                            className={`nav-link group flex items-center space-x-3 p-3 rounded-xl transition-all duration-300 hover:bg-${item.color}-500/20 ${activeSection === item.id ? 'active' : ''}`}
+                        >
+                            <div className={`w-8 h-8 flex items-center justify-center bg-${item.color}-500/20 rounded-lg group-hover:bg-${item.color}-500/40 transition-colors`}>
+                                <span className={`text-${item.color}-400 text-sm`}>{item.icon}</span>
+                            </div>
+                            <div className="hidden group-hover:block whitespace-nowrap">
+                                <div className="text-white text-sm font-medium">{item.label}</div>
+                                <div className="text-gray-400 text-xs font-mono">{item.file}</div>
+                            </div>
+                        </a>
+                    ))}
+                </div>
+                <div className="glass-morphism rounded-2xl p-4 mt-6 text-center">
+                    <div className="flex items-center justify-center space-x-2 mb-2">
+                        <div className="w-2 h-2 bg-green-400 rounded-full animate-pulse"></div>
+                        <span className="text-green-400 text-xs font-mono">ONLINE</span>
+                    </div>
+                    <div className="text-gray-400 text-xs font-mono">Status: 200 OK</div>
+                </div>
+            </nav>
+        </>
     );
 };

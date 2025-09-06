@@ -184,24 +184,37 @@ export const ThreeScene: React.FC = () => {
         const mtlLoader = new MTLLoader();
         mtlLoader.setResourcePath(basePath);
         mtlLoader.setPath(basePath);
-        mtlLoader.load('model.mtl', (materials) => {
+        mtlLoader.load('mesa_pc.mtl', (materials) => {
             materials.preload();
             const objLoader = new OBJLoader();
             objLoader.setMaterials(materials);
             objLoader.setPath(basePath);
-            objLoader.load('model.obj', (obj) => {
+            objLoader.load('mesa_pc.obj', (obj) => {
+                // Validate the loaded object
+                if (!obj || obj.children.length === 0) {
+                    console.warn('3D model loaded but appears to be empty');
+                    return;
+                }
+
                 // Fit model to room scale
                 const box = new THREE.Box3().setFromObject(obj);
                 const sphere = box.getBoundingSphere(new THREE.Sphere());
                 const targetRadius = 2.2;
-                if (sphere.radius > 0) {
+                
+                // Validate bounding sphere
+                if (sphere.radius > 0 && !isNaN(sphere.radius)) {
                     const s = targetRadius / sphere.radius;
                     obj.scale.setScalar(s);
+                } else {
+                    console.warn('Invalid bounding sphere for 3D model, using default scale');
+                    obj.scale.setScalar(1);
                 }
 
                 // Place model on floor (y=0)
                 const newBox = new THREE.Box3().setFromObject(obj);
-                obj.position.y -= newBox.min.y;
+                if (!isNaN(newBox.min.y)) {
+                    obj.position.y -= newBox.min.y;
+                }
 
                 // Offset model so text remains visible in center
                 obj.position.x = -1.8;
@@ -211,8 +224,19 @@ export const ThreeScene: React.FC = () => {
                 obj.traverse((child) => {
                     const mesh = child as THREE.Mesh;
                     if ((mesh as any).isMesh) {
-                        mesh.castShadow = true;
-                        mesh.receiveShadow = true;
+                        // Validate geometry before enabling shadows
+                        if (mesh.geometry && mesh.geometry.attributes.position) {
+                            const positions = mesh.geometry.attributes.position.array;
+                            const hasValidPositions = Array.from(positions).every(val => !isNaN(val));
+                            
+                            if (hasValidPositions) {
+                                mesh.castShadow = true;
+                                mesh.receiveShadow = true;
+                            } else {
+                                console.warn('Mesh has invalid position data, skipping shadow setup');
+                            }
+                        }
+                        
                         if (Array.isArray(mesh.material)) {
                             mesh.material.forEach((m) => ((m as any).side = THREE.FrontSide));
                         } else if (mesh.material) {
@@ -223,6 +247,73 @@ export const ThreeScene: React.FC = () => {
 
                 loadedModel = obj;
                 scene.add(obj);
+                console.log('3D model loaded successfully');
+            }, undefined, (error) => {
+                console.error('Error loading OBJ model:', error);
+            });
+        }, undefined, (error) => {
+            console.error('Error loading MTL materials:', error);
+            // Fallback: try loading OBJ without materials
+            console.log('Attempting to load OBJ without materials as fallback...');
+            const objLoader = new OBJLoader();
+            objLoader.setPath(basePath);
+            objLoader.load('mesa_pc.obj', (obj) => {
+                // Validate the loaded object
+                if (!obj || obj.children.length === 0) {
+                    console.warn('Fallback OBJ model also appears to be empty');
+                    return;
+                }
+
+                // Apply basic material to all meshes
+                obj.traverse((child) => {
+                    const mesh = child as THREE.Mesh;
+                    if ((mesh as any).isMesh) {
+                        mesh.material = new THREE.MeshStandardMaterial({ 
+                            color: 0x888888, 
+                            metalness: 0.1, 
+                            roughness: 0.8 
+                        });
+                        
+                        // Validate geometry before enabling shadows
+                        if (mesh.geometry && mesh.geometry.attributes.position) {
+                            const positions = mesh.geometry.attributes.position.array;
+                            const hasValidPositions = Array.from(positions).every(val => !isNaN(val));
+                            
+                            if (hasValidPositions) {
+                                mesh.castShadow = true;
+                                mesh.receiveShadow = true;
+                            } else {
+                                console.warn('Fallback mesh has invalid position data, skipping shadow setup');
+                            }
+                        }
+                    }
+                });
+
+                // Fit model to room scale
+                const box = new THREE.Box3().setFromObject(obj);
+                const sphere = box.getBoundingSphere(new THREE.Sphere());
+                const targetRadius = 2.2;
+                
+                if (sphere.radius > 0 && !isNaN(sphere.radius)) {
+                    const s = targetRadius / sphere.radius;
+                    obj.scale.setScalar(s);
+                } else {
+                    obj.scale.setScalar(1);
+                }
+
+                // Position the model
+                const newBox = new THREE.Box3().setFromObject(obj);
+                if (!isNaN(newBox.min.y)) {
+                    obj.position.y -= newBox.min.y;
+                }
+                obj.position.x = -1.8;
+                obj.position.z = -0.3;
+
+                loadedModel = obj;
+                scene.add(obj);
+                console.log('Fallback 3D model loaded successfully');
+            }, undefined, (fallbackError) => {
+                console.error('Fallback OBJ loading also failed:', fallbackError);
             });
         });
         

@@ -1,5 +1,5 @@
 {
-  "name": "Rashid Siddique - Interactive Portfolio & Resume",
-  "description": "An interactive portfolio web application for Rashid Siddique, a Lead Software Engineer. It features a full-stack profile, a 3D showcase, an AI-powered chat assistant to answer questions about his profile, and a resume PDF generator.",
+  "name": "Interactive Portfolio & Resume",
+  "description": "An interactive portfolio web application; features About, a 3D showcase, an AI-powered chat assistant to answer questions about his profile, and a resume PDF generator.",
   "requestFramePermissions": []
 }
