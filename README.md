@@ -2,6 +2,16 @@
 
 Modern, open-source portfolio with AI chat (Gemini), dynamic profile data, and a 3D showcase built with React + Vite + TypeScript.
 
+<img width="300" height="400" alt="v1" src="https://github.com/user-attachments/assets/79ce97c3-d9b0-44bd-8cfa-e5e059780271" /> <img width="300" height="400" alt="v2" src="https://github.com/user-attachments/assets/d7113676-dc85-4a8b-ae72-86e46ad2ed5f" />
+<img width="300" height="400" alt="v3" src="https://github.com/user-attachments/assets/fe593465-7690-480c-8901-fee541078d1c" />
+<img width="300" height="400" alt="v4" src="https://github.com/user-attachments/assets/beaafee5-5e35-48d3-a79f-d857f4b6411e" />
+<img width="300" height="400" alt="v5" src="https://github.com/user-attachments/assets/919dcaba-cfda-48e9-9136-29844d60b234" />
+
+
+
+
+
+
 ### Features
 - Dynamic profile data via `data/profile.example.ts` with schema validation
 - AI profile assistant powered by Gemini (optional)
